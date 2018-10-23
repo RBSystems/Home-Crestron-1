@@ -1,0 +1,140 @@
+/*
+Dealer Name: 	DrTechno
+System Name:
+System Number:
+Programmer:		Adrian Lloyd-Owen
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+#SYMBOL_NAME "Magic Packet"
+#HINT "Wake On Lan sender"
+// #DEFINE_CONSTANT 
+#CATEGORY "35" // e-control Software
+#DEFAULT_VOLATILE
+// #DEFAULT_NONVOLATILE
+#ENABLE_STACK_CHECKING
+
+#HELP_BEGIN
+SEND in MAC address in dash decimal notation xx-xx-xx-xx-xx-xx
+then trigger Wake, to send magic packet
+
+Hardware Requirements;
+
+Ethernet Port
+	UDP/IP Communications Module
+	IP Address is Broadcast eg 192.168.0.255
+	Port is 9d
+	
+	
+#HELP_END
+
+// Define Inputs & Outputs Here
+
+DIGITAL_INPUT wake;
+STRING_INPUT address[17];
+STRING_OUTPUT udp$;
+INTEGER i,j,marker,last;
+STRING head[6],sub[3],hexaddress[30],magic[128];
+
+PUSH wake       // Put Actual program statments inside {}
+{
+	IF (LEN(hexaddress))
+	{
+		udp$ = head + magic;
+		PRINT("UDP$ Length=%u\n",LEN(magic)+6);
+	}
+
+}
+INTEGER_FUNCTION hex(BYVAL INTEGER c)
+{
+    if ('0' <= c && c <= '9') return (c - '0');
+    if ('a' <= c && c <= 'f') return (c - 'a' + 10);
+    if ('A' <= c && c <= 'F') return (c - 'A' + 10);
+    return( -1);
+}
+
+INTEGER_FUNCTION HTOI(BYREF STRING data)
+{
+		INTEGER msn,lsn, c;
+		msn = hex(GETC(data));
+		IF (msn s< 0) RETURN(-1);
+		ELSE
+		{
+			lsn = hex(GETC(data)) ;
+			IF (lsn s< 0) RETURN(-1);
+			ELSE
+			{
+				RETURN(16*msn + lsn);
+			}
+		}
+}
+	
+CHANGE address
+{
+	INTEGER val;
+	marker = 1;
+	last = 0;
+	i = 1;
+	hexaddress = "";
+	magic = "";
+	WHILE(i < 6)
+	{
+		marker = find("-",address,last+1);
+		IF(!marker)
+		{
+			PRINT("Invalid MAC address, %s\n",address);
+			BREAK;
+		}
+		ELSE
+		{
+			sub = MID(address,last+1,marker-last-1);
+			val = HTOI(sub);
+			PRINT ("Substring=%s [%02X]\n",sub,val);
+			IF(val<>65535)
+			{
+				hexaddress = hexaddress + CHR(val);
+			}
+			ELSE
+			{
+				PRINT("Invalid MAC address, %s\n",address);
+				BREAK;
+			}
+			last = marker;
+		}
+		i = i + 1;
+	}
+	IF(i = 6)
+	{
+		sub = MID(address,last+1,LEN(address)-last);
+		val = HTOI(sub);
+		PRINT ("Substring=%s [%02X]\n",sub,val);
+		IF(val<>65535)
+		{
+			hexaddress = hexaddress + CHR(val);
+			FOR(i = 1 to 16)
+			{
+				magic = magic + hexaddress;
+			}
+		}
+		ELSE
+		{
+			PRINT("Invalid MAC address, %s\n",address);
+			hexaddress = "";
+		}
+
+	}
+}
+
+function main()
+{
+	address = "";
+	magic = "";
+	FOR(i = 1 to 16)
+	{
+		head = head + CHR(0xFF);
+	}
+}
